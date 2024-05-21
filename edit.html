@@ -32,174 +32,144 @@
             border-radius: 8px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
         }
+        .question-container h3 {
+            margin-bottom: 10px;
+            color: #ff9900;
+        }
         .question-container label {
             display: block;
             margin-bottom: 5px;
+            font-weight: bold;
         }
-        .question-container input, .question-container textarea {
-            width: calc(100% - 16px);
-            padding: 8px;
+        .question-container input[type="text"],
+        .question-container textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
             margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            transition: border-color 0.3s ease;
+            box-sizing: border-box;
         }
-        .question-container input:focus, .question-container textarea:focus {
-            border-color: #ff9900;
-            outline: none;
+        .question-container textarea {
+            height: 60px;
         }
         .btn {
             background-color: #ff9900;
             color: #fff;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            margin: 5px;
             transition: background-color 0.3s ease;
         }
         .btn:hover {
-            background-color: #e68a00;
+            background-color: #ff8800;
         }
-        .remove-btn {
-            background-color: #dc3545;
-            color: #fff;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .remove-btn:hover {
-            background-color: #c82333;
+        .btn-group {
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Quiz Maker</h1>
-        <div id="question-list"></div>
-        <div class="btn-group">
-            <button id="add-question" class="btn">Add Question</button>
-            <button id="save" class="btn">Save Changes</button>
-        </div>
+<div class="container">
+    <h1>Edit Quiz</h1>
+    <div id="questions-container"></div>
+    <div class="btn-group">
+        <button id="add-question" class="btn">Add Question</button>
+        <button id="save-changes" class="btn">Save Changes</button>
     </div>
+</div>
 
-    <script>
-        const questions = JSON.parse(localStorage.getItem('questions')) || [
-            {
-            question: "What is the value of x in the equation 2x + 5 = 15?",
-            options: ["5", "6", "7", "8"],
-            answer: "5",
-            solution: "Subtract 5 from both sides to get 2x = 10, then divide by 2 to get x = 5."
-        },
-        {
-            question: "Solve for x: 3x - 4 = 8",
-            options: ["4", "6", "8", "10"],
-            answer: "4",
-            solution: "Add 4 to both sides to get 3x = 12, then divide by 3 to get x = 4."
-        },
-        {
-            question: "If 3x + 7 = 22, what is the value of x?",
-            options: ["5", "7", "8", "9"],
-            answer: "5",
-            solution: "Subtract 7 from both sides to get 3x = 15, then divide by 3 to get x = 5."
-        },
-        {
-            question: "What is the solution to the equation 2x - 3 = 9?",
-            options: ["6", "7", "8", "9"],
-            answer: "6",
-            solution: "Add 3 to both sides to get 2x = 12, then divide by 2 to get x = 6."
-        },
-        {
-            question: "Solve for x: 4x + 12 = 32",
-            options: ["5", "6", "7", "8"],
-            answer: "5",
-            solution: "Subtract 12 from both sides to get 4x = 20, then divide by 4 to get x = 5."
-        },
-        {
-            question: "If 2x - 5 = 7, what is the value of x?",
-            options: ["6", "7", "8", "9"],
-            answer: "6",
-            solution: "Add 5 to both sides to get 2x = 12, then divide by 2 to get x = 6."
-        },
-        {
-            question: "What is the value of x in the equation 3x + 9 = 21?",
-            options: ["4", "5", "6", "7"],
-            answer: "4",
-            solution: "Subtract 9 from both sides to get 3x = 12, then divide by 3 to get x = 4."
-        },
-        {
-            question: "Solve for x: 2(x - 3) = 10",
-            options: ["6", "7", "8", "9"],
-            answer: "8",
-            solution: "Distribute 2 into the parentheses to get 2x - 6 = 10, then add 6 to both sides to get 2x = 16, then divide by 2 to get x = 8."
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+    const supabaseUrl = 'https://rependsijwaphyyotlge.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlcGVuZHNpandhcGh5eW90bGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTYzMDM1MzIsImV4cCI6MjAzMTg3OTUzMn0.obg3ijmXO9FoDGlRv3QomcRz9YEjjkQD3gqQZDLYck8';
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let questions = [];
+
+    async function fetchQuestions() {
+        const { data: fetchedQuestions, error } = await supabase.from('questions').select('*');
+        if (error) {
+            console.error('Error fetching questions:', error.message);
+            return;
         }
-    ];
-        function renderQuestions() {
-            const questionList = document.getElementById('question-list');
-            questionList.innerHTML = '';
+        questions = fetchedQuestions;
+        renderQuestions();
+    }
 
-            questions.forEach((q, index) => {
-                const questionContainer = document.createElement('div');
-                questionContainer.classList.add('question-container');
-
-                questionContainer.innerHTML = `
-                    <label for="question${index}">Question ${index + 1}</label>
-                    <input type="text" id="question${index}" placeholder="Enter your question" value="${q.question}">
-                    <label for="options${index}">Options (comma separated)</label>
-                    <input type="text" id="options${index}" placeholder="Option 1, Option 2, ..." value="${q.options.join(',')}">
-                    <label for="answer${index}">Answer</label>
-                    <input type="text" id="answer${index}" placeholder="Enter the correct answer" value="${q.answer}">
-                    <label for="solution${index}">Solution</label>
-                    <textarea id="solution${index}" placeholder="Enter the solution">${q.solution}</textarea>
-                    <button class="remove-btn" data-index="${index}">Remove</button>
-                `;
-                questionList.appendChild(questionContainer);
-            });
-
-            const removeButtons = document.querySelectorAll('.remove-btn');
-            removeButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const indexToRemove = button.getAttribute('data-index');
-                    questions.splice(indexToRemove, 1);
-                    renderQuestions();
-                });
-            });
-        }
-
-        document.getElementById('save').addEventListener('click', () => {
-            const updatedQuestions = [];
-            questions.forEach((q, index) => {
-                const updatedQuestion = document.getElementById(`question${index}`).value;
-                const updatedOptions = document.getElementById(`options${index}`).value.split(',');
-                const updatedAnswer = document.getElementById(`answer${index}`).value;
-                const updatedSolution = document.getElementById(`solution${index}`).value;
-
-                updatedQuestions.push({
-                    question: updatedQuestion,
-                    options: updatedOptions,
-                    answer: updatedAnswer,
-                    solution: updatedSolution
-                });
-            });
-
-            localStorage.setItem('questions', JSON.stringify(updatedQuestions));
-            alert('Changes saved successfully!');
+    function renderQuestions() {
+        const questionsContainer = document.getElementById('questions-container');
+        questionsContainer.innerHTML = '';
+        questions.forEach((question, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.classList.add('question-container');
+            questionDiv.innerHTML = `
+                <h3>Question ${index + 1}</h3>
+                <label for="question${index}">Question:</label>
+                <input type="text" id="question${index}" value="${question.question}">
+                <label for="option1-${index}">Option 1:</label>
+                <input type="text" id="option1-${index}" value="${question.options[0]}">
+                <label for="option2-${index}">Option 2:</label>
+                <input type="text" id="option2-${index}" value="${question.options[1]}">
+                <label for="option3-${index}">Option 3:</label>
+                <input type="text" id="option3-${index}" value="${question.options[2]}">
+                <label for="option4-${index}">Option 4:</label>
+                <input type="text" id="option4-${index}" value="${question.options[3]}">
+                <label for="answer${index}">Answer:</label>
+                <input type="text" id="answer${index}" value="${question.answer}">
+                <label for="solution${index}">Solution:</label>
+                <textarea id="solution${index}">${question.solution}</textarea>
+                <button class="btn" onclick="removeQuestion(${index})">Remove Question</button>
+            `;
+            questionsContainer.appendChild(questionDiv);
         });
+    }
 
-        document.getElementById('add-question').addEventListener('click', () => {
-            questions.push({
-                question: "",
-                options: ["", "", "", ""],
-                answer: "",
-                solution: ""
-            });
-            renderQuestions();
-        });
-
-        window.onload = function () {
-            renderQuestions();
+    function addQuestion() {
+        const newQuestion = {
+            question: '',
+            options: ['', '', '', ''],
+            answer: '',
+            solution: ''
         };
-    </script>
+        questions.push(newQuestion);
+        renderQuestions();
+    }
+
+    function removeQuestion(index) {
+        questions.splice(index, 1);
+        renderQuestions();
+    }
+
+    async function saveQuestions() {
+        const updatedQuestions = questions.map((question, index) => ({
+            id: question.id,
+            question: document.getElementById(`question${index}`).value,
+            options: [
+                document.getElementById(`option1-${index}`).value,
+                document.getElementById(`option2-${index}`).value,
+                document.getElementById(`option3-${index}`).value,
+                document.getElementById(`option4-${index}`).value
+            ],
+            answer: document.getElementById(`answer${index}`).value,
+            solution: document.getElementById(`solution${index}`).value
+        }));
+        const { data, error } = await supabase.from('questions').upsert(updatedQuestions);
+        if (error) {
+            console.error('Error saving questions:', error.message);
+            return;
+        }
+        alert('Changes saved successfully!');
+        fetchQuestions();
+    }
+
+    document.getElementById('add-question').addEventListener('click', addQuestion);
+    document.getElementById('save-changes').addEventListener('click', saveQuestions);
+
+    window.onload = fetchQuestions;
+</script>
 </body>
 </html>
